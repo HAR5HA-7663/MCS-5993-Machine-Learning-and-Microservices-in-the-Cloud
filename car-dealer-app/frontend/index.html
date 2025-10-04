@@ -1,0 +1,252 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Vroomm Vrommmm Car Dealership</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+
+<body>
+    <header>
+        <h1>🚗 Vroomm Vrommmm Car Management 🚗</h1>
+        <p>Manage your dealership inventory</p>
+    </header>
+    <main>
+        <!-- Add Car Section -->
+        <div class="add-car-section">
+            <h2>➕ Add New Car</h2>
+            <form id="add-car-form">
+                <div class="form-row">
+                    <input type="text" id="vin" placeholder="VIN (e.g., 1HGBH41JXMN109186)" required>
+                    <input type="number" id="year" placeholder="Year (e.g., 2024)" min="1900" max="2025" required>
+                    <input type="text" id="brand" placeholder="Brand (e.g., Toyota)" required>
+                </div>
+                <div class="form-row">
+                    <input type="text" id="model" placeholder="Model (e.g., Camry)" required>
+                    <input type="number" id="mileage" placeholder="Mileage" min="0" required>
+                    <input type="number" id="price" placeholder="Price ($)" min="0" step="0.01" required>
+                </div>
+                <button type="submit">Add Car</button>
+            </form>
+            <div id="add-message" class="message"></div>
+        </div>
+
+        <!-- Delete Section -->
+        <div class="action-bar">
+            <button id="delete-btn" onclick="deleteSelected()" disabled>🗑️ Delete Selected Cars</button>
+            <span id="selected-count"></span>
+            
+            <!-- Sorting Controls -->
+            <div class="sort-controls">
+                <label>Sort by:</label>
+                <select id="sort-by" onchange="loadCars(1)">
+                    <option value="year">Year</option>
+                    <option value="brand">Brand</option>
+                    <option value="model">Model</option>
+                    <option value="price">Price</option>
+                    <option value="mileage">Mileage</option>
+                    <option value="added_at">Date Added</option>
+                </select>
+                <select id="sort-order" onchange="loadCars(1)">
+                    <option value="DESC">Descending ↓</option>
+                    <option value="ASC">Ascending ↑</option>
+                </select>
+            </div>
+        </div>
+
+        <!-- Car List -->
+        <div id="car-list"></div>
+        
+        <!-- Pagination -->
+        <div class="pagination">
+            <button onclick="prevPage()" id="prev-btn">Previous</button>
+            <span id="page-num"></span>
+            <button onclick="nextPage()" id="next-btn">Next</button>
+        </div>
+    </main>
+    <footer>
+        <p>&copy; 2025 Vroomm Vrommmm. All rights reserved.</p>
+    </footer>
+
+    <script>
+        let currentPage = 1;
+        let total = 0;
+        const perPage = 10;
+        let selectedVins = new Set();
+
+        // Load cars
+        async function loadCars(page = 1) {
+            const sortBy = document.getElementById('sort-by').value;
+            const sortOrder = document.getElementById('sort-order').value;
+            
+            const res = await fetch(`/api/cars?page=${page}&sort_by=${sortBy}&sort_order=${sortOrder}`);
+            const data = await res.json();
+            total = data.total;
+            currentPage = data.page;
+
+            document.getElementById("page-num").textContent = `Page ${currentPage} of ${Math.ceil(total / perPage)}`;
+
+            let html = `<table>
+                <thead>
+                    <tr>
+                        <th><input type="checkbox" id="select-all" onchange="toggleSelectAll()"></th>
+                        <th>VIN</th>
+                        <th>Year</th>
+                        <th>Brand</th>
+                        <th>Model</th>
+                        <th>Mileage</th>
+                        <th>Price</th>
+                        <th>Date Added</th>
+                    </tr>
+                </thead>
+                <tbody>`;
+            
+            for (let car of data.cars) {
+                const isChecked = selectedVins.has(car.vin) ? 'checked' : '';
+                const addedDate = car.added_at ? new Date(car.added_at).toLocaleString() : 'N/A';
+                html += `<tr>
+                    <td><input type="checkbox" class="car-checkbox" value="${car.vin}" ${isChecked} onchange="updateSelection()"></td>
+                    <td>${car.vin}</td>
+                    <td>${car.year}</td>
+                    <td>${car.brand}</td>
+                    <td>${car.model}</td>
+                    <td>${car.mileage.toLocaleString()} miles</td>
+                    <td>$${car.price.toLocaleString()}</td>
+                    <td>${addedDate}</td>
+                </tr>`;
+            }
+            html += "</tbody></table>";
+            document.getElementById("car-list").innerHTML = html;
+
+            updateSelectionUI();
+
+            // Disable buttons if necessary
+            document.getElementById("prev-btn").disabled = currentPage === 1;
+            document.getElementById("next-btn").disabled = currentPage * perPage >= total;
+        }
+
+        // Add car
+        document.getElementById('add-car-form').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            
+            const carData = {
+                vin: document.getElementById('vin').value,
+                year: parseInt(document.getElementById('year').value),
+                brand: document.getElementById('brand').value,
+                model: document.getElementById('model').value,
+                mileage: parseInt(document.getElementById('mileage').value),
+                price: parseFloat(document.getElementById('price').value)
+            };
+
+            try {
+                const res = await fetch('/api/cars', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(carData)
+                });
+
+                const msg = document.getElementById('add-message');
+                if (res.ok) {
+                    msg.textContent = '✅ Car added successfully!';
+                    msg.className = 'message success';
+                    document.getElementById('add-car-form').reset();
+                    loadCars(currentPage);
+                    setTimeout(() => msg.textContent = '', 3000);
+                } else {
+                    const error = await res.json();
+                    msg.textContent = '❌ Error: ' + error.error;
+                    msg.className = 'message error';
+                }
+            } catch (error) {
+                const msg = document.getElementById('add-message');
+                msg.textContent = '❌ Failed to add car';
+                msg.className = 'message error';
+            }
+        });
+
+        // Selection handling
+        function toggleSelectAll() {
+            const selectAll = document.getElementById('select-all').checked;
+            const checkboxes = document.querySelectorAll('.car-checkbox');
+            checkboxes.forEach(cb => {
+                cb.checked = selectAll;
+                if (selectAll) {
+                    selectedVins.add(cb.value);
+                } else {
+                    selectedVins.delete(cb.value);
+                }
+            });
+            updateSelectionUI();
+        }
+
+        function updateSelection() {
+            const checkboxes = document.querySelectorAll('.car-checkbox');
+            selectedVins.clear();
+            checkboxes.forEach(cb => {
+                if (cb.checked) selectedVins.add(cb.value);
+            });
+            updateSelectionUI();
+        }
+
+        function updateSelectionUI() {
+            const count = selectedVins.size;
+            const deleteBtn = document.getElementById('delete-btn');
+            const countSpan = document.getElementById('selected-count');
+            
+            deleteBtn.disabled = count === 0;
+            countSpan.textContent = count > 0 ? `(${count} selected)` : '';
+        }
+
+        // Delete selected cars
+        async function deleteSelected() {
+            if (selectedVins.size === 0) return;
+
+            const carWord = selectedVins.size === 1 ? 'car' : 'cars';
+            const confirmed = confirm(
+                `⚠️ Are you sure you want to delete ${selectedVins.size} ${carWord}?\n\n` +
+                `This action cannot be undone!`
+            );
+
+            if (!confirmed) return;
+
+            try {
+                const res = await fetch('/api/cars', {
+                    method: 'DELETE',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ vins: Array.from(selectedVins) })
+                });
+
+                if (res.ok) {
+                    const result = await res.json();
+                    alert(`✅ ${result.message}`);
+                    selectedVins.clear();
+                    loadCars(currentPage);
+                } else {
+                    const error = await res.json();
+                    alert('❌ Error: ' + error.error);
+                }
+            } catch (error) {
+                alert('❌ Failed to delete cars');
+            }
+        }
+
+        function nextPage() {
+            if (currentPage * perPage < total) {
+                loadCars(currentPage + 1);
+            }
+        }
+
+        function prevPage() {
+            if (currentPage > 1) {
+                loadCars(currentPage - 1);
+            }
+        }
+
+        // Load first page
+        loadCars();
+    </script>
+</body>
+
+</html>

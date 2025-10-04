@@ -1,0 +1,42 @@
+services:
+  jobapi:
+    build: .
+    container_name: job-portal-api
+    ports:
+      - "8000:8000"
+    volumes:
+      - db_data:/app/data
+      - storage_data:/app/storage
+    environment:
+      - PYTHONUNBUFFERED=1
+      - DATABASE_PATH=/app/data/jobportal.db
+    restart: unless-stopped
+    networks:
+      - jobportal-network
+
+  # PostgreSQL database (optional - for production use)
+  # Uncomment the section below if you want to use PostgreSQL instead of SQLite
+  
+  # db:
+  #   image: postgres:14-alpine
+  #   container_name: jobportal-db
+  #   environment:
+  #     POSTGRES_USER: admin
+  #     POSTGRES_PASSWORD: admin123
+  #     POSTGRES_DB: jobportal
+  #   volumes:
+  #     - postgres_data:/var/lib/postgresql/data
+  #   ports:
+  #     - "5432:5432"
+  #   networks:
+  #     - jobportal-network
+  #   restart: unless-stopped
+
+networks:
+  jobportal-network:
+    driver: bridge
+
+volumes:
+  db_data:
+  storage_data:
+#   postgres_data:
