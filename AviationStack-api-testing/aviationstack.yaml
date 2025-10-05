@@ -1,0 +1,271 @@
+openapi: 3.0.0
+info:
+  title: AviationStack API - Interactive Swagger UI
+  version: 1.0.0
+  description: |
+    A complete Swagger/OpenAPI specification for the AviationStack REST API.
+    Enter your access key and test live endpoints for real-time and historical aviation data.
+
+servers:
+  - url: https://api.aviationstack.com/v1
+    description: AviationStack public REST API
+
+components:
+  parameters:
+    AccessKey:
+      name: access_key
+      in: query
+      description: Your AviationStack API access key
+      required: true
+      schema:
+        type: string
+
+paths:
+  /flights:
+    get:
+      summary: Get real-time or historical flight data
+      description: Retrieve flight status and details
+      parameters:
+        - $ref: "#/components/parameters/AccessKey"
+        - name: flight_iata
+          in: query
+          description: IATA flight code
+          schema:
+            type: string
+        - name: flight_icao
+          in: query
+          description: ICAO flight code
+          schema:
+            type: string
+        - name: dep_iata
+          in: query
+          description: Departure airport IATA code
+          schema:
+            type: string
+        - name: arr_iata
+          in: query
+          description: Arrival airport IATA code
+          schema:
+            type: string
+        - name: flight_date
+          in: query
+          description: Date (YYYY-MM-DD) for historical flights
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Successful response
+          content:
+            application/json:
+              schema:
+                type: object
+
+  /routes:
+    get:
+      summary: Get airline route data
+      description: Retrieve available routes by airline or airport
+      parameters:
+        - $ref: "#/components/parameters/AccessKey"
+        - name: airline_iata
+          in: query
+          description: Airline IATA code
+          schema:
+            type: string
+        - name: dep_iata
+          in: query
+          description: Departure airport IATA code
+          schema:
+            type: string
+        - name: arr_iata
+          in: query
+          description: Arrival airport IATA code
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Successful response
+          content:
+            application/json:
+              schema:
+                type: object
+
+  /airports:
+    get:
+      summary: Get airport information
+      description: Retrieve data on airports including location, IATA, ICAO codes
+      parameters:
+        - $ref: "#/components/parameters/AccessKey"
+        - name: search
+          in: query
+          description: Search term (city or airport name)
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Successful response
+          content:
+            application/json:
+              schema:
+                type: object
+
+  /airlines:
+    get:
+      summary: Get airline information
+      description: Retrieve data about airlines worldwide
+      parameters:
+        - $ref: "#/components/parameters/AccessKey"
+        - name: search
+          in: query
+          description: Airline name or code
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Successful response
+          content:
+            application/json:
+              schema:
+                type: object
+
+  /airplanes:
+    get:
+      summary: Get airplane details
+      description: Retrieve details of specific aircraft (tail number, type, etc.)
+      parameters:
+        - $ref: "#/components/parameters/AccessKey"
+        - name: registration_number
+          in: query
+          description: Tail number or registration code
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Successful response
+          content:
+            application/json:
+              schema:
+                type: object
+
+  /aircraft_types:
+    get:
+      summary: Get aircraft type information
+      description: Retrieve a list of aircraft types (model names and IATA codes)
+      parameters:
+        - $ref: "#/components/parameters/AccessKey"
+      responses:
+        "200":
+          description: Successful response
+          content:
+            application/json:
+              schema:
+                type: object
+
+  /taxes:
+    get:
+      summary: Get aviation tax data
+      description: Retrieve a list of aviation taxes and associated codes
+      parameters:
+        - $ref: "#/components/parameters/AccessKey"
+      responses:
+        "200":
+          description: Successful response
+          content:
+            application/json:
+              schema:
+                type: object
+
+  /cities:
+    get:
+      summary: Get city data
+      description: Retrieve information about cities including IATA city codes
+      parameters:
+        - $ref: "#/components/parameters/AccessKey"
+        - name: search
+          in: query
+          description: City name or keyword
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Successful response
+          content:
+            application/json:
+              schema:
+                type: object
+
+  /countries:
+    get:
+      summary: Get country data
+      description: Retrieve countries by name or ISO code
+      parameters:
+        - $ref: "#/components/parameters/AccessKey"
+        - name: search
+          in: query
+          description: Country name or code
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Successful response
+          content:
+            application/json:
+              schema:
+                type: object
+
+  /timetable:
+    get:
+      summary: Get flight timetable
+      description: Retrieve daily flight schedules (arrivals/departures) for an airport
+      parameters:
+        - $ref: "#/components/parameters/AccessKey"
+        - name: iataCode
+          in: query
+          description: Airport IATA code
+          required: true
+          schema:
+            type: string
+        - name: type
+          in: query
+          description: Type of schedule (arrival or departure)
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Successful response
+          content:
+            application/json:
+              schema:
+                type: object
+
+  /flightsfuture:
+    get:
+      summary: Get future flight schedules
+      description: Retrieve upcoming flights for a given airport and date
+      parameters:
+        - $ref: "#/components/parameters/AccessKey"
+        - name: iataCode
+          in: query
+          description: Airport IATA code
+          required: true
+          schema:
+            type: string
+        - name: type
+          in: query
+          description: Type (arrival or departure)
+          required: true
+          schema:
+            type: string
+        - name: date
+          in: query
+          description: Future date (YYYY-MM-DD)
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Successful response
+          content:
+            application/json:
+              schema:
+                type: object
