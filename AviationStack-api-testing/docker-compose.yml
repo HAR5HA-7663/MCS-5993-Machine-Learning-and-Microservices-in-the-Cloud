@@ -1,0 +1,20 @@
+version: '3.8'
+
+services:
+  swagger-ui:
+    image: swaggerapi/swagger-ui
+    container_name: aviationstack-swagger-ui
+    ports:
+      - "8080:8080"
+    environment:
+      - SWAGGER_JSON=/foo/aviationstack.yaml
+    volumes:
+      - ./aviationstack.yaml:/foo/aviationstack.yaml
+    restart: unless-stopped
+
+  fastapi-proxy:
+    build: .
+    container_name: aviationstack-fastapi-proxy
+    ports:
+      - "8000:8000"
+    restart: unless-stopped
