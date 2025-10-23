@@ -1,0 +1,35 @@
+# Ignore commands folder and scripts
+commands/
+*.sh
+
+# Ignore git and version control
+.git/
+.gitignore
+*.md
+README.md
+
+# Ignore IDE and editor files
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# Ignore OS files
+.DS_Store
+Thumbs.db
+*.log
+
+# Ignore temporary files
+*.tmp
+*.temp
+.cache/
+
+# Ignore Docker files not needed in image
+docker-compose*.yml
+Dockerfile.*
+
+# Ignore development files
+.env
+.env.local
+*.env

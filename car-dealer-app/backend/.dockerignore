@@ -1,0 +1,32 @@
+# Ignore commands and scripts
+../commands/
+../*.sh
+
+# Ignore frontend files not needed in backend
+../frontend/
+
+# Ignore git and documentation
+../.git/
+../.gitignore
+../*.md
+
+# Ignore IDE files
+../.vscode/
+../.idea/
+
+# Ignore OS files
+../.DS_Store
+../Thumbs.db
+
+# Ignore Docker compose files
+../docker-compose*.yml
+
+# Ignore temporary and cache files
+*.pyc
+__pycache__/
+*.log
+.cache/
+
+# Ignore environment files
+.env
+*.env
