@@ -1,0 +1,30 @@
+# Ignore commands and scripts
+../commands/
+../*.sh
+
+# Ignore backend files not needed in frontend
+../backend/
+
+# Ignore git and documentation
+../.git/
+../.gitignore
+../*.md
+
+# Ignore IDE files
+../.vscode/
+../.idea/
+
+# Ignore OS files
+../.DS_Store
+../Thumbs.db
+
+# Ignore Docker compose files
+../docker-compose*.yml
+
+# Ignore temporary files
+*.log
+.cache/
+
+# Ignore environment files
+.env
+*.env

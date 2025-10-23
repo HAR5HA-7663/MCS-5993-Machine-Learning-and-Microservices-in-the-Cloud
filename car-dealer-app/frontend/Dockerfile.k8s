@@ -1,4 +1,5 @@
+# For Kubernetes deployment
 FROM nginx:alpine
 COPY index.html /usr/share/nginx/html/
 COPY style.css /usr/share/nginx/html/
-COPY nginx-simple.conf /etc/nginx/nginx.conf
+COPY nginx-k8s.conf /etc/nginx/nginx.conf

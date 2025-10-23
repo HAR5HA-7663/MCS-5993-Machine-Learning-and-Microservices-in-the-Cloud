@@ -12,8 +12,52 @@
     <header>
         <h1>🚗 Vroomm Vrommmm Car Management 🚗</h1>
         <p>Manage your dealership inventory</p>
+        
+        <!-- Database Action Buttons -->
+        <div class="header-actions">
+            <button id="seed-btn" onclick="seedDatabase()" class="action-btn seed-btn">
+                🌱 Seed DB
+            </button>
+            <button id="erase-btn" onclick="eraseDatabase()" class="action-btn erase-btn">
+                🗑️ Erase DB
+            </button>
+        </div>
     </header>
     <main>
+        <!-- Statistics Dashboard -->
+        <div class="stats-section">
+            <h2>📊 Dealership Statistics</h2>
+            <div class="stats-grid">
+                <div class="stat-card">
+                    <h3 id="total-cars">-</h3>
+                    <p>Total Cars</p>
+                </div>
+                <div class="stat-card">
+                    <h3 id="avg-price">-</h3>
+                    <p>Average Price</p>
+                </div>
+                <div class="stat-card">
+                    <h3 id="avg-mileage">-</h3>
+                    <p>Average Mileage</p>
+                </div>
+                <div class="stat-card">
+                    <h3 id="most-expensive">-</h3>
+                    <p>Most Expensive</p>
+                </div>
+            </div>
+        </div>
+
+        <!-- Search Section -->
+        <div class="search-section">
+            <h2>🔍 Search Cars</h2>
+            <div class="search-bar">
+                <input type="text" id="search-input" placeholder="Search by brand, model, VIN, or year..." />
+                <button onclick="searchCars()">Search</button>
+                <button onclick="clearSearch()">Clear</button>
+            </div>
+            <div id="search-results"></div>
+        </div>
+
         <!-- Add Car Section -->
         <div class="add-car-section">
             <h2>➕ Add New Car</h2>
@@ -66,6 +110,20 @@
             <button onclick="nextPage()" id="next-btn">Next</button>
         </div>
     </main>
+
+    <!-- Car Detail Modal -->
+    <div id="car-modal" class="modal" onclick="closeModal()">
+        <div class="modal-content" onclick="event.stopPropagation()">
+            <span class="close" onclick="closeModal()">&times;</span>
+            <h2>🚗 Car Details</h2>
+            <div id="car-details"></div>
+            <div class="modal-actions">
+                <button onclick="editCar()" id="edit-car-btn">✏️ Edit Car</button>
+                <button onclick="closeModal()" class="secondary">Close</button>
+            </div>
+        </div>
+    </div>
+
     <footer>
         <p>&copy; 2025 Vroomm Vrommmm. All rights reserved.</p>
     </footer>
@@ -75,6 +133,9 @@
         let total = 0;
         const perPage = 10;
         let selectedVins = new Set();
+        let isSearchMode = false;
+        let currentSearchQuery = '';
+        let currentCarVin = null;
 
         // Load cars
         async function loadCars(page = 1) {
@@ -106,8 +167,8 @@
             for (let car of data.cars) {
                 const isChecked = selectedVins.has(car.vin) ? 'checked' : '';
                 const addedDate = car.added_at ? new Date(car.added_at).toLocaleString() : 'N/A';
-                html += `<tr>
-                    <td><input type="checkbox" class="car-checkbox" value="${car.vin}" ${isChecked} onchange="updateSelection()"></td>
+                html += `<tr onclick="showCarDetails('${car.vin}')" style="cursor: pointer;">
+                    <td onclick="event.stopPropagation()"><input type="checkbox" class="car-checkbox" value="${car.vin}" ${isChecked} onchange="updateSelection()"></td>
                     <td>${car.vin}</td>
                     <td>${car.year}</td>
                     <td>${car.brand}</td>
@@ -244,8 +305,282 @@
             }
         }
 
-        // Load first page
+        // Load statistics
+        async function loadStats() {
+            try {
+                const res = await fetch('/api/stats');
+                const data = await res.json();
+                
+                document.getElementById('total-cars').textContent = data.total_cars;
+                document.getElementById('avg-price').textContent = '$' + data.average_price.toLocaleString();
+                document.getElementById('avg-mileage').textContent = Math.round(data.average_mileage).toLocaleString() + ' mi';
+                
+                if (data.most_expensive.brand) {
+                    document.getElementById('most-expensive').textContent = 
+                        `${data.most_expensive.brand} ${data.most_expensive.model} ($${data.most_expensive.price.toLocaleString()})`;
+                } else {
+                    document.getElementById('most-expensive').textContent = 'N/A';
+                }
+            } catch (error) {
+                console.error('Failed to load stats:', error);
+            }
+        }
+
+        // Search functionality
+        async function searchCars(page = 1) {
+            const query = document.getElementById('search-input').value.trim();
+            if (!query) {
+                alert('Please enter a search term');
+                return;
+            }
+
+            isSearchMode = true;
+            currentSearchQuery = query;
+
+            try {
+                const res = await fetch(`/api/search?q=${encodeURIComponent(query)}&page=${page}`);
+                const data = await res.json();
+
+                displaySearchResults(data);
+                updateSearchPagination(data);
+            } catch (error) {
+                document.getElementById('search-results').innerHTML = '<p>❌ Search failed</p>';
+            }
+        }
+
+        function displaySearchResults(data) {
+            let html = `<h3>Search Results for "${data.query}" (${data.total} found)</h3>`;
+            
+            if (data.cars.length === 0) {
+                html += '<p>No cars found matching your search.</p>';
+            } else {
+                html += `<table>
+                    <thead>
+                        <tr>
+                            <th>VIN</th>
+                            <th>Year</th>
+                            <th>Brand</th>
+                            <th>Model</th>
+                            <th>Mileage</th>
+                            <th>Price</th>
+                            <th>Date Added</th>
+                        </tr>
+                    </thead>
+                    <tbody>`;
+                
+                for (let car of data.cars) {
+                    const addedDate = car.added_at ? new Date(car.added_at).toLocaleString() : 'N/A';
+                    html += `<tr>
+                        <td>${car.vin}</td>
+                        <td>${car.year}</td>
+                        <td>${car.brand}</td>
+                        <td>${car.model}</td>
+                        <td>${car.mileage.toLocaleString()} miles</td>
+                        <td>$${car.price.toLocaleString()}</td>
+                        <td>${addedDate}</td>
+                    </tr>`;
+                }
+                html += "</tbody></table>";
+                
+                // Add search pagination
+                html += `<div class="search-pagination">
+                    <button onclick="searchCars(${data.page - 1})" ${data.page === 1 ? 'disabled' : ''}>Previous</button>
+                    <span>Page ${data.page} of ${Math.ceil(data.total / data.per_page)}</span>
+                    <button onclick="searchCars(${data.page + 1})" ${data.page * data.per_page >= data.total ? 'disabled' : ''}>Next</button>
+                </div>`;
+            }
+            
+            document.getElementById('search-results').innerHTML = html;
+        }
+
+        function updateSearchPagination(data) {
+            // Update the search pagination if needed
+            currentPage = data.page;
+        }
+
+        function clearSearch() {
+            document.getElementById('search-input').value = '';
+            document.getElementById('search-results').innerHTML = '';
+            isSearchMode = false;
+            currentSearchQuery = '';
+            loadCars(1);
+        }
+
+        // Allow Enter key in search
+        document.getElementById('search-input').addEventListener('keypress', function(e) {
+            if (e.key === 'Enter') {
+                searchCars();
+            }
+        });
+
+        // Modify loadCars to refresh stats
+        const originalLoadCars = loadCars;
+        loadCars = async function(page = 1) {
+            await originalLoadCars(page);
+            await loadStats(); // Refresh stats after loading cars
+        };
+
+        // Car details modal functionality
+
+        async function showCarDetails(vin) {
+            try {
+                const res = await fetch(`/api/cars/${vin}`);
+                const car = await res.json();
+                
+                if (res.ok) {
+                    currentCarVin = vin;
+                    const addedDate = car.added_at ? new Date(car.added_at).toLocaleString() : 'N/A';
+                    
+                    document.getElementById('car-details').innerHTML = `
+                        <div class="car-detail-grid">
+                            <div class="detail-item">
+                                <strong>VIN:</strong> ${car.vin}
+                            </div>
+                            <div class="detail-item">
+                                <strong>Year:</strong> ${car.year}
+                            </div>
+                            <div class="detail-item">
+                                <strong>Brand:</strong> ${car.brand}
+                            </div>
+                            <div class="detail-item">
+                                <strong>Model:</strong> ${car.model}
+                            </div>
+                            <div class="detail-item">
+                                <strong>Mileage:</strong> ${car.mileage.toLocaleString()} miles
+                            </div>
+                            <div class="detail-item">
+                                <strong>Price:</strong> $${car.price.toLocaleString()}
+                            </div>
+                            <div class="detail-item">
+                                <strong>Added:</strong> ${addedDate}
+                            </div>
+                        </div>
+                    `;
+                    
+                    document.getElementById('car-modal').style.display = 'block';
+                } else {
+                    alert('❌ Failed to load car details');
+                }
+            } catch (error) {
+                alert('❌ Error loading car details');
+            }
+        }
+
+        function closeModal() {
+            document.getElementById('car-modal').style.display = 'none';
+            currentCarVin = null;
+        }
+
+        function editCar() {
+            if (!currentCarVin) return;
+            
+            // For now, just show an alert. In a real app, you'd open an edit form
+            alert(`🚧 Edit functionality for ${currentCarVin} would open here.\n\nThis could include:\n- Edit form with current values\n- Update API call\n- Refresh the car list`);
+        }
+
+        // Close modal with Escape key
+        document.addEventListener('keydown', function(e) {
+            if (e.key === 'Escape') {
+                closeModal();
+            }
+        });
+
+        // Database management functions
+        async function seedDatabase() {
+            const confirmed = confirm(
+                "🌱 Seed Database\n\n" +
+                "This will add 50 sample cars to your database WITHOUT clearing existing data.\n\n" +
+                "Continue?"
+            );
+            
+            if (!confirmed) return;
+            
+            const seedBtn = document.getElementById('seed-btn');
+            seedBtn.disabled = true;
+            seedBtn.textContent = '🔄 Seeding...';
+            
+            try {
+                const res = await fetch('/api/seed', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' }
+                });
+                
+                const result = await res.json();
+                
+                if (res.ok) {
+                    alert(`✅ ${result.message}\n\nNew cars have been added to your database!`);
+                    // Refresh the car list and statistics
+                    await loadCars();
+                    await loadStats();
+                } else {
+                    alert(`❌ Seeding failed: ${result.error}`);
+                }
+            } catch (error) {
+                alert('❌ Error connecting to backend for seeding');
+                console.error('Seed error:', error);
+            } finally {
+                seedBtn.disabled = false;
+                seedBtn.textContent = '🌱 Seed DB';
+            }
+        }
+
+        async function eraseDatabase() {
+            const confirmed = confirm(
+                "⚠️ DANGER: Erase Database\n\n" +
+                "This will DELETE ALL CARS from your database!\n\n" +
+                "This action CANNOT be undone!\n\n" +
+                "Are you absolutely sure you want to continue?"
+            );
+            
+            if (!confirmed) return;
+            
+            // Double confirmation for destructive action
+            const doubleConfirmed = confirm(
+                "🚨 FINAL WARNING 🚨\n\n" +
+                "You are about to PERMANENTLY DELETE all car data!\n\n" +
+                "Click OK only if you are 100% sure!"
+            );
+            
+            if (!doubleConfirmed) return;
+            
+            const eraseBtn = document.getElementById('erase-btn');
+            eraseBtn.disabled = true;
+            eraseBtn.textContent = '🔄 Erasing...';
+            
+            try {
+                const res = await fetch('/api/erase', {
+                    method: 'DELETE',
+                    headers: { 'Content-Type': 'application/json' }
+                });
+                
+                const result = await res.json();
+                
+                if (res.ok) {
+                    alert(`✅ ${result.message}\n\nDatabase has been completely cleared.`);
+                    // Refresh the car list and statistics
+                    await loadCars();
+                    await loadStats();
+                } else {
+                    alert(`❌ Erase failed: ${result.error}`);
+                }
+            } catch (error) {
+                alert('❌ Error connecting to backend for erasing');
+                console.error('Erase error:', error);
+            } finally {
+                eraseBtn.disabled = false;
+                eraseBtn.textContent = '🗑️ Erase DB';
+            }
+        }
+
+        // Enhanced error handling
+        window.addEventListener('unhandledrejection', function(event) {
+            console.error('Unhandled promise rejection:', event.reason);
+            alert('❌ An unexpected error occurred. Please refresh the page and try again.');
+        });
+
+        // Load initial data
         loadCars();
+        loadStats();
     </script>
 </body>
 
